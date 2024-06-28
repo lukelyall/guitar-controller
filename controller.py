@@ -1,18 +1,19 @@
-# TODO: fix false positives
-
 import pyaudio
 import scipy.fftpack
 import numpy
 import keyboard
+import pyautogui
+import pydirectinput
 import time
+from collections import Counter
 
-DELAY = 2.0
+DELAY = 1.0
 
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
 RATE = 44100
-RECORD_SECONDS = 5
+RECORD_SECONDS = 1
 
 # UP, DOWN, LEFT, RIGHT, Z, X
 NOTES = ["low e", "a", "d", "g", "high e", "10b"]
@@ -25,10 +26,12 @@ p = pyaudio.PyAudio()
 stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
 THRESHOLD = 100
+TOLERANCE = 0.5
 
 
 # convert notes to keys
 def keyboard_input():
+    freq_arr = []
     last_pressed = time.time()
     while True:
         data = stream.read(CHUNK)
@@ -42,27 +45,20 @@ def keyboard_input():
         peak_idx = numpy.argmax(fft_data)
         peak_freq = freq[peak_idx]
 
+        freq_arr.append(abs(peak_freq))
+
         current_time = time.time()
-        if current_time - last_pressed > DELAY:
-            match abs(peak_freq):
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[0], atol=0.5):
-                    keyboard.press_and_release("up")
-                    print(f"{NOTES[0]} - Pressed up")
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[1], atol=0.5):
-                    keyboard.press_and_release("down")
-                    print(f"{NOTES[1]} - Pressed down")
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[2], atol=0.5):
-                    keyboard.press_and_release("left")
-                    print(f"{NOTES[2]} - Pressed left")
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[3], atol=0.5):
-                    keyboard.press_and_release("right")
-                    print(f"{NOTES[3]} - Pressed right")
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[4], atol=0.5):
-                    keyboard.press_and_release("z")
-                    print(f"{NOTES[4]} - Pressed z")
-                case _ if numpy.isclose(peak_freq, NOTE_FREQ[5], atol=0.5):
-                    keyboard.press_and_release("x")
-                    print(f"{NOTES[5]} - Pressed x")
+        if current_time - last_pressed > RECORD_SECONDS:
+            m_c_freq = Counter(freq_arr).most_common(1)[0][0]
+            for i, note_freq in enumerate(NOTE_FREQ):
+                if numpy.isclose(m_c_freq, note_freq, atol=TOLERANCE):
+                    key_pressed = {NOTE_FREQ[0]: "up", NOTE_FREQ[1]: "down", NOTE_FREQ[2]: "left", NOTE_FREQ[3]: "right", NOTE_FREQ[4]: "z", NOTE_FREQ[5]: "x"}[note_freq]
+                    # keyboard.press_and_release(key_pressed)
+                    # pyautogui.press(key_pressed)
+                    pydirectinput.press(key_pressed)
+                    print(f"{NOTES[i]} - Pressed {key_pressed}")
+                    last_pressed = time.time()
+            freq_arr = []
 
 
 # find frequency of notes
@@ -84,6 +80,7 @@ def detect_note():
 
 
 # try:
+#     print("listening")
 #     detect_note()
 # except KeyboardInterrupt:
 #     pass
