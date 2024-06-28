@@ -3,7 +3,7 @@ This program integrates audio processing with Python's PyAudio library. It detec
 # Usage
 To use this program, you need to run the following command in your terminal:
 ```
-pip install pyaudio numpy scipy keyboard
+pip install pyaudio numpy scipy pydirectinput
 ```
 With that installed, you now need to edit and find the frequencies of your own guitar notes using the detect_note() function and update the NOTE_FREQ list. Once that is finished, you can run the program with the following:
 ```
